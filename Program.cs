@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text.Json;
 using System.Threading;
 using StackExchange.Redis;
 
@@ -39,8 +40,26 @@ class Program
             // Generate artificial current price based on a sine wave function
 
             // Publish the current price to the channel
-            _ = subscriber.Publish(channelName, "MARKET_ALPHA_PRICE_CHANGED");
-            _ = subscriber.Publish(channelName, "MARKET_BETA_PRICE_CHANGED");
+            var event1 = new MarketPriceUpdatedEvent
+            {
+                EventType = EventTypeEnum.MarketPriceChanged,
+                MarketName = "MarketAlpha",
+                BuyPrice = marketAlphaBuyPrice,
+                SellPrice = marketAlphaSellPrice,
+            };
+
+            var event2 = new MarketPriceUpdatedEvent
+            {
+                EventType = EventTypeEnum.MarketPriceChanged,
+                MarketName = "MarketBeta",
+                BuyPrice = marketBetaBuyPrice,
+                SellPrice = marketBetaSellPrice,
+            };
+
+            // Serialize these events to JSON and publish to Redis channel
+            _ = subscriber.Publish(channelName, JsonSerializer.Serialize(event1));
+            _ = subscriber.Publish(channelName, JsonSerializer.Serialize(event2));
+
         }, null, TimeSpan.Zero, TimeSpan.FromSeconds(5));
 
         Console.WriteLine($"Publishing generated prices to Redis channel: {channelName}. Press Enter to exit.");

@@ -1,0 +1,8 @@
+version: '3.4'
+
+services:
+  marketpriceservicertsoba:
+    image: ${DOCKER_REGISTRY-}marketpriceservicertsoba
+    build:
+      context: .
+      dockerfile: ./Dockerfile

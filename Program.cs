@@ -7,8 +7,14 @@ class Program
 {
     static void Main()
     {
-        // Replace these values with your Redis server connection details
-        string redisConnectionString = "redis-11850.c281.us-east-1-2.ec2.cloud.redislabs.com:11850,password=RIQxfcAullMkJ8THWZEQNILlHaYUR8aJ,ssl=False,abortConnect=False,connectTimeout=5000,syncTimeout=5000,defaultDatabase=0,connectRetry=10";
+        //string redisConnectionString = "redis-11850.c281.us-east-1-2.ec2.cloud.redislabs.com:11850,password=RIQxfcAullMkJ8THWZEQNILlHaYUR8aJ,ssl=False,abortConnect=False,connectTimeout=5000,syncTimeout=5000,defaultDatabase=0,connectRetry=10";
+        string redisConnectionString = Environment.GetEnvironmentVariable("REDIS_CONNECTION_STRING");
+
+        if (redisConnectionString == null)
+        {
+            redisConnectionString = "redis-11850.c281.us-east-1-2.ec2.cloud.redislabs.com:11850,password=RIQxfcAullMkJ8THWZEQNILlHaYUR8aJ,ssl=False,abortConnect=False,connectTimeout=5000,syncTimeout=5000,defaultDatabase=0,connectRetry=10";
+        }
+
         string channelName = "priceChannel";
         string priceRangeKey = "priceRange";
         string marketAlphaKey = "marketAlpha";
@@ -56,14 +62,31 @@ class Program
                 SellPrice = marketBetaSellPrice,
             };
 
-            // Serialize these events to JSON and publish to Redis channel
-            _ = subscriber.Publish(channelName, JsonSerializer.Serialize(event1));
-            _ = subscriber.Publish(channelName, JsonSerializer.Serialize(event2));
+            var event1string = JsonSerializer.Serialize(event1);
+            var event2string = JsonSerializer.Serialize(event2);
+
+            try
+            {
+                Console.WriteLine($"To :{channelName}. Send:\r\n{event1string}");
+                _ = subscriber.Publish(channelName, JsonSerializer.Serialize(event1));
+
+                Console.WriteLine($"To :{channelName}. Send:\r\n{event2string}");
+                _ = subscriber.Publish(channelName, JsonSerializer.Serialize(event2));
+            }
+            catch (StackExchange.Redis.RedisTimeoutException exception)
+            {
+                Console.WriteLine(exception.Message);
+            }
 
         }, null, TimeSpan.Zero, TimeSpan.FromSeconds(5));
 
         Console.WriteLine($"Publishing generated prices to Redis channel: {channelName}. Press Enter to exit.");
-        Console.ReadLine();
+
+        while (true)
+        {
+            Thread.Sleep(1000);
+        }
+
     }
 
     static Tuple<double, double> GetPriceRange(IDatabase redisDatabase, string key)

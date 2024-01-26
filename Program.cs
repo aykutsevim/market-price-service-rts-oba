@@ -20,13 +20,14 @@ class Program
         string marketAlphaKey = "marketAlpha";
         string marketBetaKey = "marketBeta";
 
-        // Connect to Redis
-        ConnectionMultiplexer redis = ConnectionMultiplexer.Connect(redisConnectionString);
-        ISubscriber subscriber = redis.GetSubscriber();
 
         // Generate and publish the current price every second
         Timer timer = new Timer(_ =>
         {
+            // Connect to Redis
+            ConnectionMultiplexer redis = ConnectionMultiplexer.Connect(redisConnectionString);
+            ISubscriber subscriber = redis.GetSubscriber();
+
             // Fetch Max and Min Prices from Redis key
             //Tuple<double, double> priceRange = GetPriceRange(redis.GetDatabase(), priceRangeKey);
             var redisDB = redis.GetDatabase();
@@ -67,15 +68,19 @@ class Program
 
             try
             {
-                Console.WriteLine($"To :{channelName}. Send:\r\n{event1string}");
+                //Console.WriteLine($"To :{channelName}. Send:\r\n{event1string}");
                 _ = subscriber.Publish(channelName, JsonSerializer.Serialize(event1));
 
-                Console.WriteLine($"To :{channelName}. Send:\r\n{event2string}");
+                //Console.WriteLine($"To :{channelName}. Send:\r\n{event2string}");
                 _ = subscriber.Publish(channelName, JsonSerializer.Serialize(event2));
             }
             catch (StackExchange.Redis.RedisTimeoutException exception)
             {
                 Console.WriteLine(exception.Message);
+            }
+            finally
+            {
+                redis.Close(true);
             }
 
         }, null, TimeSpan.Zero, TimeSpan.FromSeconds(5));
